@@ -6,7 +6,7 @@ export class TopController {
   constructor(private readonly topService: TopService) {}
 
   @Get()
-  findAll() {
-    return this.topService.findAll();
+  async findAll() {
+    return await this.topService.findAll();
   }
 }
