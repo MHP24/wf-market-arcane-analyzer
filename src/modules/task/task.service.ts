@@ -8,7 +8,7 @@ export class TaskService {
 
   constructor(private readonly arcanesService: ArcanesService) {}
 
-  @Cron('*/7 * * * *')
+  @Cron('* * * * *')
   async updateArcanesData() {
     try {
       await this.arcanesService.getAll();

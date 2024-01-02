@@ -37,7 +37,7 @@ export class ArcanesService {
       const {
         payload: { items },
       } = await this.httpAdapter.get<ItemResponse>(
-        `${this.configService.get('MARKET_BASE_URL')}/items`,
+        `${this.configService.get('MARKET_API_BASE_URL')}/items`,
       );
 
       const arcanes = items.filter(

@@ -22,13 +22,13 @@ export class OrdersService {
       try {
         const orders = await this.httpAdapter.get<OrderResponse>(
           `${this.configService.get(
-            'MARKET_BASE_URL',
+            'MARKET_API_BASE_URL',
           )}/items/${url_name}/orders`,
         );
 
         this.logger.log(
           `${this.configService.get(
-            'MARKET_BASE_URL',
+            'MARKET_API_BASE_URL',
           )}/items/${url_name}/orders`,
         );
         await this.delay(1000 / MAX_CONCURRENCY);
@@ -36,8 +36,11 @@ export class OrdersService {
         const itemOrder: ItemOrder = {
           slug: url_name,
           ...rest,
-          name: item_name,
           ...this.calcPrices(orders.payload.orders),
+          name: item_name,
+          thumb: `${this.configService.get('MARKET_BASE_URL')}/static/assets/${
+            rest.thumb
+          }`,
         };
 
         await this.updateOrderByItem(itemOrder);
