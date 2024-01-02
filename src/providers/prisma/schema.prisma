@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+model MarketItem {
+  id String @id()
+  slug String @unique()
+  name String
+  thumb String
+  highestPrice Int @map("highest_price")
+  currentPrice Int @map("current_price")
+  averagePrice Int @map("average_price")
+  createdAt DateTime @map("created_at") @default(now())
+  updatedAt DateTime @map("updated_at") @updatedAt
+
+  @@map("market_items")
+}
