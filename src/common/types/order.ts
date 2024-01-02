@@ -16,7 +16,7 @@ export interface Order {
   last_update: string;
   visible: boolean;
   id: string;
-  mod_rank: number;
+  mod_rank?: number;
   region: Region;
 }
 
@@ -36,8 +36,6 @@ export enum Region {
   Fr = 'fr',
   Pt = 'pt',
   Ru = 'ru',
-  ZhHans = 'zh-hans',
-  ZhHant = 'zh-hant',
 }
 
 export interface User {

@@ -36,3 +36,5 @@ lerna-debug.log*
 
 # Etc
 .env
+etc/
+src/providers/prisma/migrations/*

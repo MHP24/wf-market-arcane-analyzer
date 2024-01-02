@@ -22,16 +22,13 @@ export class TopService {
         `${this.configService.get('MARKET_BASE_URL')}/items`,
       );
 
-      const arcanes = items
-        .filter(
-          ({ url_name }) =>
-            url_name.split('_').length < 3 && url_name.match(/^arcane/),
-        )
-        .map(({ url_name }) => ({ url_name }));
+      const arcanes = items.filter(
+        ({ url_name }) =>
+          url_name.split('_').length < 3 && url_name.match(/^arcane/),
+      );
 
-      console.log({ arcanes });
-
-      return await this.ordersService.getOrders(arcanes);
+      const orders = await this.ordersService.getOrders(arcanes);
+      return orders;
     } catch (error) {
       this.logger.error(error);
       return [];

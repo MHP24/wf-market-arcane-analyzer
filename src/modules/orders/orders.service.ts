@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpAdapter } from '../../common/adapters';
-import { ItemResponse } from '../../common/types';
+import { Order, OrderResponse } from 'src/common/types/order';
+import { Item } from 'src/common/types';
 
 @Injectable()
 export class OrdersService {
@@ -12,49 +13,67 @@ export class OrdersService {
     private readonly httpAdapter: HttpAdapter,
   ) {}
 
-  async getOrders(items: { url_name: string }[] = []) {
-    try {
-      const MAX_CONCURRENCY = this.configService.get('MAX_CONCURRENCY');
-      const results = [];
-      let currentIndex = 0;
+  async getOrders(items: Item[] = []) {
+    const MAX_CONCURRENCY = this.configService.get('MAX_CONCURRENCY');
+    const results = [];
 
-      const makeRequest = async () => {
-        if (currentIndex < items.length) {
-          const { url_name } = items[currentIndex];
+    for (const { url_name, ...rest } of items) {
+      try {
+        const orders = await this.httpAdapter.get<OrderResponse>(
+          `${this.configService.get(
+            'MARKET_BASE_URL',
+          )}/items/${url_name}/orders`,
+        );
 
-          try {
-            const orders = await this.httpAdapter.get<ItemResponse>(
-              `${this.configService.get(
-                'MARKET_BASE_URL',
-              )}/items/${url_name}/orders`,
-            );
+        this.logger.log(
+          `${this.configService.get(
+            'MARKET_BASE_URL',
+          )}/items/${url_name}/orders`,
+        );
 
-            await this.delay(1000 / MAX_CONCURRENCY);
+        await this.delay(1000 / MAX_CONCURRENCY);
 
-            results.push({
-              item: url_name,
-              orders,
-            });
-          } catch (error) {
-            this.logger.error(error);
-            results.push(null);
-          }
-
-          currentIndex++;
-          await makeRequest();
-        }
-      };
-
-      const requests = Array.from({ length: MAX_CONCURRENCY }, () =>
-        makeRequest(),
-      );
-      await Promise.all(requests);
-
-      return results;
-    } catch (error) {
-      this.logger.error(error);
-      return [];
+        results.push({
+          item: url_name,
+          price: this.calcPrices(orders.payload.orders),
+          ...rest,
+        });
+      } catch (error) {
+        this.logger.error(error);
+        results.push(null);
+      }
     }
+
+    return results;
+  }
+
+  calcPrices(orders: Order[]) {
+    const modRanks = orders.map(({ mod_rank }) => mod_rank);
+
+    const ranks = {
+      minRank: Math.min(...modRanks),
+      maxRank: Math.max(...modRanks),
+    };
+
+    orders = orders.filter(
+      ({ user: { status }, order_type, mod_rank }) =>
+        status === 'ingame' &&
+        order_type === 'sell' &&
+        mod_rank &&
+        mod_rank === ranks.maxRank,
+    );
+
+    const prices = orders.map((order) => order.platinum);
+    const highest = Math.max(...prices);
+    const current = Math.min(...prices);
+
+    const avg =
+      prices.reduce((acc: number, price: number) => {
+        acc += price;
+        return acc;
+      }, 0) / prices.length;
+
+    return { highest, current, avg: Math.round(avg) };
   }
 
   delay(ms: number) {
