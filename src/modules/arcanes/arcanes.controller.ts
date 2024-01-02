@@ -7,7 +7,6 @@ export class ArcanesController {
 
   @Get()
   async findAll() {
-    // return await this.arcanesService.getAll();
-    return true;
+    return await this.arcanesService.findAll();
   }
 }
