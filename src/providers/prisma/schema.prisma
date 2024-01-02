@@ -11,7 +11,6 @@ model MarketItem {
   id String @id()
   slug String @unique()
   name String
-  type String
   thumb String
   highestPrice Int @map("highest_price")
   currentPrice Int @map("current_price")

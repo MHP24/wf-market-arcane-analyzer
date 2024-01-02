@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpAdapter } from '../../common/adapters';
 import { Order, OrderResponse } from 'src/common/types/order';
-import { Item } from 'src/common/types';
+import { Item, ItemOrder } from 'src/common/types';
+import { PrismaService } from 'src/providers/prisma/prisma.service';
 
 @Injectable()
 export class OrdersService {
@@ -11,13 +12,13 @@ export class OrdersService {
   constructor(
     private readonly configService: ConfigService,
     private readonly httpAdapter: HttpAdapter,
+    private readonly prismaService: PrismaService,
   ) {}
 
-  async getOrders(items: Item[] = []) {
+  async handleOrders(items: Item[] = []) {
     const MAX_CONCURRENCY = this.configService.get('MAX_CONCURRENCY');
-    const results = [];
 
-    for (const { url_name, ...rest } of items) {
+    for (const { url_name, item_name, ...rest } of items) {
       try {
         const orders = await this.httpAdapter.get<OrderResponse>(
           `${this.configService.get(
@@ -30,23 +31,34 @@ export class OrdersService {
             'MARKET_BASE_URL',
           )}/items/${url_name}/orders`,
         );
-
         await this.delay(1000 / MAX_CONCURRENCY);
 
-        results.push({
-          item: url_name,
-          price: this.calcPrices(orders.payload.orders),
+        const itemOrder: ItemOrder = {
+          slug: url_name,
           ...rest,
-        });
+          name: item_name,
+          ...this.calcPrices(orders.payload.orders),
+        };
+
+        await this.updateOrderByItem(itemOrder);
       } catch (error) {
         this.logger.error(error);
-        results.push(null);
       }
     }
-
-    return results;
   }
 
+  // * New data obtained from REST Service into database
+  async updateOrderByItem(item: ItemOrder) {
+    await this.prismaService.marketItem.upsert({
+      where: {
+        id: item.id,
+      },
+      create: item,
+      update: item,
+    });
+  }
+
+  // * Prices obtained using the max rank for the item
   calcPrices(orders: Order[]) {
     const modRanks = orders.map(({ mod_rank }) => mod_rank);
 
@@ -64,8 +76,8 @@ export class OrdersService {
     );
 
     const prices = orders.map((order) => order.platinum);
-    const highest = Math.max(...prices);
-    const current = Math.min(...prices);
+    const highestPrice = Math.max(...prices);
+    const currentPrice = Math.min(...prices);
 
     const avg =
       prices.reduce((acc: number, price: number) => {
@@ -73,9 +85,10 @@ export class OrdersService {
         return acc;
       }, 0) / prices.length;
 
-    return { highest, current, avg: Math.round(avg) };
+    return { highestPrice, currentPrice, averagePrice: Math.round(avg) };
   }
 
+  // * Delay for HTTP requests
   delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }

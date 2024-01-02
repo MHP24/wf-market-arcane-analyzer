@@ -5,8 +5,8 @@ import { HttpAdapter } from '../../common/adapters';
 import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
-export class TopService {
-  logger = new Logger('TopService');
+export class ArcanesService {
+  logger = new Logger('ArcanesService');
 
   constructor(
     private readonly httpAdapter: HttpAdapter,
@@ -14,7 +14,7 @@ export class TopService {
     private readonly ordersService: OrdersService,
   ) {}
 
-  async findAll() {
+  async getAll() {
     try {
       const {
         payload: { items },
@@ -27,11 +27,9 @@ export class TopService {
           url_name.split('_').length < 3 && url_name.match(/^arcane/),
       );
 
-      const orders = await this.ordersService.getOrders(arcanes);
-      return orders;
+      await this.ordersService.handleOrders(arcanes);
     } catch (error) {
       this.logger.error(error);
-      return [];
     }
   }
 }
